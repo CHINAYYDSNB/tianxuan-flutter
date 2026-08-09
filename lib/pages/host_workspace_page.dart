@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/host.dart';
 import '../providers/host_store.dart';
+import '../services/log_service.dart';
 import '../services/recording_service.dart';
 import '../services/sftp_service.dart';
 import '../services/ssh_service.dart';
@@ -33,11 +34,14 @@ class _HostWorkspacePageState extends ConsumerState<HostWorkspacePage>
   @override
   void initState() {
     super.initState();
+    LogService.instance
+        .info('ws', 'workspace open host=${widget.host.name} id=${widget.host.id}');
     _tabController = TabController(length: 3, vsync: this);
     _connect();
   }
 
   Future<void> _connect() async {
+    LogService.instance.info('ws', 'connect start');
     setState(() {
       _connecting = true;
       _error = null;
@@ -49,7 +53,9 @@ class _HostWorkspacePageState extends ConsumerState<HostWorkspacePage>
       await _ssh.startShell();
       await _sftp.init(_ssh);
       if (mounted) setState(() => _sftpReady = true);
+      LogService.instance.info('ws', 'connect success, sftp ready');
     } catch (e) {
+      LogService.instance.error('ws', 'connect failed: $e');
       if (mounted) setState(() => _error = '连接失败: $e');
     } finally {
       if (mounted) setState(() => _connecting = false);
@@ -58,6 +64,7 @@ class _HostWorkspacePageState extends ConsumerState<HostWorkspacePage>
 
   @override
   void dispose() {
+    LogService.instance.info('ws', 'workspace close');
     _tabController.dispose();
     _ssh.disconnect();
     super.dispose();

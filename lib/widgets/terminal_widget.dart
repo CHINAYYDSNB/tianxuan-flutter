@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:xterm/xterm.dart';
 
+import '../services/log_service.dart';
 import '../services/recording_service.dart';
 import '../services/ssh_service.dart';
 
@@ -48,9 +49,15 @@ class _TerminalWidgetState extends State<TerminalWidget> {
   @override
   void initState() {
     super.initState();
+    final log = LogService.instance;
+    _focusNode.addListener(() {
+      log.info('term', 'focus=${_focusNode.hasFocus}');
+    });
+
     _terminal = Terminal(
       maxLines: 10000,
       onOutput: (data) {
+        log.writeBytes('term-in', data.codeUnits, prefix: 'xtermInput> ');
         widget.ssh.write(data);
       },
       onResize: (w, h, pw, ph) {
@@ -80,31 +87,27 @@ class _TerminalWidgetState extends State<TerminalWidget> {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () => _focusNode.requestFocus(),
-      behavior: HitTestBehavior.opaque,
-      child: Column(
-        children: [
-          if (_error != null)
-            Container(
-              width: double.infinity,
-              color: Colors.red.shade900.withValues(alpha: 0.3),
-              padding: const EdgeInsets.all(6),
-              child: Text(_error!,
-                  style:
-                      const TextStyle(color: Colors.redAccent, fontSize: 12)),
-            ),
-          Expanded(
-            child: TerminalView(
-              _terminal,
-              focusNode: _focusNode,
-              autofocus: true,
-              theme: _darkTheme,
-              backgroundOpacity: 1,
-            ),
+    return Column(
+      children: [
+        if (_error != null)
+          Container(
+            width: double.infinity,
+            color: Colors.red.shade900.withValues(alpha: 0.3),
+            padding: const EdgeInsets.all(6),
+            child: Text(_error!,
+                style: const TextStyle(color: Colors.redAccent, fontSize: 12)),
           ),
-        ],
-      ),
+        Expanded(
+          child: TerminalView(
+            _terminal,
+            focusNode: _focusNode,
+            autofocus: true,
+            hardwareKeyboardOnly: true,
+            theme: _darkTheme,
+            backgroundOpacity: 1,
+          ),
+        ),
+      ],
     );
   }
 }

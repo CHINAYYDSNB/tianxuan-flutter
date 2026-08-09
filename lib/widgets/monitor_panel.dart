@@ -68,6 +68,13 @@ class _MonitorPanelState extends ConsumerState<MonitorPanel> {
       return const Center(
           child: Text('采集指标中...', style: TextStyle(color: Colors.white54)));
     }
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    // high-contrast line colors; dark theme uses bright hues, light uses deep hues
+    final ioReadColor = isDark ? const Color(0xFF60A5FA) : const Color(0xFF2563EB);
+    final ioWriteColor = isDark ? const Color(0xFF4ADE80) : const Color(0xFF16A34A);
+    final netRxColor = isDark ? const Color(0xFFF472B6) : const Color(0xFFDB2777);
+    final netTxColor = isDark ? const Color(0xFFFBBF24) : const Color(0xFFD97706);
+
     return ListView(
       padding: const EdgeInsets.all(12),
       children: [
@@ -85,23 +92,27 @@ class _MonitorPanelState extends ConsumerState<MonitorPanel> {
         _labelRow('负载',
             '${m.load1.toStringAsFixed(2)} / ${m.load5.toStringAsFixed(2)} / ${m.load15.toStringAsFixed(2)}'),
         const Divider(height: 24),
-        const Text('IO 吞吐 (KB/s)',
-            style: TextStyle(fontSize: 12, color: Colors.white54)),
+        Text('IO 吞吐 (KB/s)',
+            style: TextStyle(
+                fontSize: 12,
+                color: isDark ? Colors.white54 : Colors.black45)),
         const SizedBox(height: 4),
         _lineChart(
           series: [
-            (_series(_ioRead), const Color(0xFF6366F1)),
-            (_series(_ioWrite), const Color(0xFF10B981)),
+            (_series(_ioRead), ioReadColor),
+            (_series(_ioWrite), ioWriteColor),
           ],
         ),
         const Divider(height: 24),
-        const Text('网络吞吐 (KB/s)',
-            style: TextStyle(fontSize: 12, color: Colors.white54)),
+        Text('网络吞吐 (KB/s)',
+            style: TextStyle(
+                fontSize: 12,
+                color: isDark ? Colors.white54 : Colors.black45)),
         const SizedBox(height: 4),
         _lineChart(
           series: [
-            (_series(_netRx), const Color(0xFF22D3EE)),
-            (_series(_netTx), const Color(0xFFA855F7)),
+            (_series(_netRx), netRxColor),
+            (_series(_netTx), netTxColor),
           ],
         ),
       ],
@@ -159,18 +170,21 @@ class _MonitorPanelState extends ConsumerState<MonitorPanel> {
   }
 
   Widget _row(String label, String text, double percent, Color color) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final dimColor = isDark ? Colors.white54 : Colors.black45;
+    final textColor = isDark ? Colors.white : Colors.black87;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(label, style: const TextStyle(color: Colors.white54)),
+            Text(label, style: TextStyle(color: dimColor)),
             Text(text,
-                style: const TextStyle(
+                style: TextStyle(
                     fontFamily: 'monospace',
                     fontSize: 12,
-                    color: Colors.white)),
+                    color: textColor)),
           ],
         ),
         const SizedBox(height: 4),
@@ -179,7 +193,9 @@ class _MonitorPanelState extends ConsumerState<MonitorPanel> {
           child: LinearProgressIndicator(
             value: (percent / 100).clamp(0.0, 1.0),
             minHeight: 4,
-            backgroundColor: const Color(0xFF1E222A),
+            backgroundColor: isDark
+                ? const Color(0xFF1E222A)
+                : const Color(0xFFE0E3E8),
             valueColor: AlwaysStoppedAnimation(color),
           ),
         ),
@@ -188,15 +204,16 @@ class _MonitorPanelState extends ConsumerState<MonitorPanel> {
   }
 
   Widget _labelRow(String label, String text) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final dimColor = isDark ? Colors.white54 : Colors.black45;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 3),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: const TextStyle(color: Colors.white54)),
+          Text(label, style: TextStyle(color: dimColor)),
           Text(text,
-              style: const TextStyle(
-                  fontFamily: 'monospace', fontSize: 12)),
+              style: const TextStyle(fontFamily: 'monospace', fontSize: 12)),
         ],
       ),
     );
