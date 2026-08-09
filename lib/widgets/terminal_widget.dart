@@ -101,7 +101,7 @@ class _TerminalWidgetState extends State<TerminalWidget> {
           child: TerminalView(
             _terminal,
             focusNode: _focusNode,
-            autofocus: true,
+            autofocus: false,
             hardwareKeyboardOnly: false,
             theme: _darkTheme,
             backgroundOpacity: 1,
