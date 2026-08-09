@@ -8,21 +8,11 @@ import 'services/log_service.dart';
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
   LogService.instance.init();
-  // Load persisted theme before runApp so there is no theme flash.
-  runApp(const ProviderScopeProxy());
+  runApp(const ProviderScope(child: ThemeLoader()));
 }
 
-class ProviderScopeProxy extends StatelessWidget {
-  const ProviderScopeProxy({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const _ThemeLoader();
-  }
-}
-
-class _ThemeLoader extends ConsumerWidget {
-  const _ThemeLoader();
+class ThemeLoader extends ConsumerWidget {
+  const ThemeLoader();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
