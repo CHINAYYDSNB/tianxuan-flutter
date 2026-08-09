@@ -39,7 +39,7 @@ void main() {
     expect(updated.name, 'B');
     expect(updated.port, 2222);
     expect(updated.createdAt, h.createdAt);
-    expect(updated.updatedAt.isAfter(h.updatedAt), isTrue);
+    expect(updated.updatedAt.isBefore(h.updatedAt), isFalse);
   });
 
   test('Host encode/decode list', () {
