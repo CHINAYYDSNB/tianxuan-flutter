@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:dartssh2/dartssh2.dart';
@@ -114,7 +115,7 @@ class SshService {
     _disposed = true;
   }
 
-  static Uint8List utf8Bytes(String s) => Uint8List.fromList(s.codeUnits);
+  static Uint8List utf8Bytes(String s) => Uint8List.fromList(utf8.encode(s));
 
   static Future<void> testConnection({
     required Host host,

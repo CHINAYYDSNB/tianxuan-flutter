@@ -3,10 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/host.dart';
 import '../providers/host_store.dart';
+import '../services/recording_service.dart';
 import '../services/sftp_service.dart';
 import '../services/ssh_service.dart';
 import '../widgets/file_panel.dart';
 import '../widgets/monitor_panel.dart';
+import '../widgets/recorder_panel.dart';
 import '../widgets/terminal_widget.dart';
 
 class HostWorkspacePage extends ConsumerStatefulWidget {
@@ -22,6 +24,7 @@ class _HostWorkspacePageState extends ConsumerState<HostWorkspacePage>
     with SingleTickerProviderStateMixin {
   final SshService _ssh = SshService();
   final SftpService _sftp = SftpService();
+  final RecordingService _recorder = RecordingService();
   bool _connecting = false;
   String? _error;
   bool _sftpReady = false;
@@ -30,7 +33,7 @@ class _HostWorkspacePageState extends ConsumerState<HostWorkspacePage>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
     _connect();
   }
 
@@ -100,7 +103,7 @@ class _HostWorkspacePageState extends ConsumerState<HostWorkspacePage>
                       ],
                     ),
                   )
-                : TerminalWidget(ssh: _ssh),
+                : TerminalWidget(ssh: _ssh, recorder: _recorder),
           ),
           Container(
             width: 300,
@@ -115,6 +118,7 @@ class _HostWorkspacePageState extends ConsumerState<HostWorkspacePage>
                   tabs: const [
                     Tab(text: '监控'),
                     Tab(text: '文件'),
+                    Tab(text: '录像'),
                   ],
                 ),
                 Expanded(
@@ -127,6 +131,11 @@ class _HostWorkspacePageState extends ConsumerState<HostWorkspacePage>
                           : const Center(
                               child: Text('SFTP 初始化中...',
                                   style: TextStyle(color: Colors.white54))),
+                      RecorderPanel(
+                        recorder: _recorder,
+                        hostName: widget.host.name,
+                        onConnect: _connect,
+                      ),
                     ],
                   ),
                 ),

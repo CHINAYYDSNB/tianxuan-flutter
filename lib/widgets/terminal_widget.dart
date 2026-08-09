@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:xterm/xterm.dart';
 
+import '../services/recording_service.dart';
 import '../services/ssh_service.dart';
 
 const TerminalTheme _darkTheme = TerminalTheme(
@@ -31,8 +32,9 @@ const TerminalTheme _darkTheme = TerminalTheme(
 
 class TerminalWidget extends StatefulWidget {
   final SshService ssh;
+  final RecordingService? recorder;
 
-  const TerminalWidget({super.key, required this.ssh});
+  const TerminalWidget({super.key, required this.ssh, this.recorder});
 
   @override
   State<TerminalWidget> createState() => _TerminalWidgetState();
@@ -40,6 +42,7 @@ class TerminalWidget extends StatefulWidget {
 
 class _TerminalWidgetState extends State<TerminalWidget> {
   late final Terminal _terminal;
+  final FocusNode _focusNode = FocusNode();
   String? _error;
 
   @override
@@ -55,6 +58,7 @@ class _TerminalWidgetState extends State<TerminalWidget> {
       },
     );
     widget.ssh.onOutput = (bytes) {
+      widget.recorder?.record(bytes);
       _terminal.write(String.fromCharCodes(bytes));
     };
     widget.ssh.onStateChange = (connected) {
@@ -69,30 +73,38 @@ class _TerminalWidgetState extends State<TerminalWidget> {
 
   @override
   void dispose() {
+    _focusNode.dispose();
     widget.ssh.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        if (_error != null)
-          Container(
-            width: double.infinity,
-            color: Colors.red.shade900.withValues(alpha: 0.3),
-            padding: const EdgeInsets.all(6),
-            child: Text(_error!,
-                style: const TextStyle(color: Colors.redAccent, fontSize: 12)),
+    return GestureDetector(
+      onTap: () => _focusNode.requestFocus(),
+      behavior: HitTestBehavior.opaque,
+      child: Column(
+        children: [
+          if (_error != null)
+            Container(
+              width: double.infinity,
+              color: Colors.red.shade900.withValues(alpha: 0.3),
+              padding: const EdgeInsets.all(6),
+              child: Text(_error!,
+                  style:
+                      const TextStyle(color: Colors.redAccent, fontSize: 12)),
+            ),
+          Expanded(
+            child: TerminalView(
+              _terminal,
+              focusNode: _focusNode,
+              autofocus: true,
+              theme: _darkTheme,
+              backgroundOpacity: 1,
+            ),
           ),
-        Expanded(
-          child: TerminalView(
-            _terminal,
-            theme: _darkTheme,
-            backgroundOpacity: 1,
-          ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

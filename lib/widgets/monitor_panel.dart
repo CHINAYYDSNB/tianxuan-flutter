@@ -1,10 +1,13 @@
 import 'dart:async';
 
+import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../services/metrics_service.dart';
 import '../services/ssh_service.dart';
+
+const int _historyLen = 60;
 
 class MonitorPanel extends ConsumerStatefulWidget {
   final SshService ssh;
@@ -19,6 +22,11 @@ class _MonitorPanelState extends ConsumerState<MonitorPanel> {
   HostMetrics? _metrics;
   Timer? _timer;
 
+  final List<double> _ioRead = [];
+  final List<double> _ioWrite = [];
+  final List<double> _netRx = [];
+  final List<double> _netTx = [];
+
   @override
   void initState() {
     super.initState();
@@ -26,10 +34,22 @@ class _MonitorPanelState extends ConsumerState<MonitorPanel> {
     _collect();
   }
 
+  void _push(List<double> list, double v) {
+    list.add(v);
+    if (list.length > _historyLen) list.removeAt(0);
+  }
+
   Future<void> _collect() async {
     try {
       final m = await collectMetrics(widget.ssh);
-      if (mounted) setState(() => _metrics = m);
+      if (!mounted) return;
+      setState(() {
+        _metrics = m;
+        _push(_ioRead, m.ioReadKbps);
+        _push(_ioWrite, m.ioWriteKbps);
+        _push(_netRx, m.netRxKbps);
+        _push(_netTx, m.netTxKbps);
+      });
     } catch (_) {
       // keep previous
     }
@@ -51,8 +71,8 @@ class _MonitorPanelState extends ConsumerState<MonitorPanel> {
     return ListView(
       padding: const EdgeInsets.all(12),
       children: [
-        _row('CPU', '${m.cpuPercent.toStringAsFixed(1)}%',
-            m.cpuPercent, const Color(0xFF6366F1)),
+        _row('CPU', '${m.cpuPercent.toStringAsFixed(1)}%', m.cpuPercent,
+            const Color(0xFF6366F1)),
         const SizedBox(height: 10),
         _row('内存',
             '${m.memUsedMb}/${m.memTotalMb} MB (${m.memPercent.toStringAsFixed(0)}%)',
@@ -65,16 +85,76 @@ class _MonitorPanelState extends ConsumerState<MonitorPanel> {
         _labelRow('负载',
             '${m.load1.toStringAsFixed(2)} / ${m.load5.toStringAsFixed(2)} / ${m.load15.toStringAsFixed(2)}'),
         const Divider(height: 24),
-        const Text('IO 吞吐',
+        const Text('IO 吞吐 (KB/s)',
             style: TextStyle(fontSize: 12, color: Colors.white54)),
-        _labelRow('读', '${m.ioReadKbps.toStringAsFixed(1)} KB/s'),
-        _labelRow('写', '${m.ioWriteKbps.toStringAsFixed(1)} KB/s'),
+        const SizedBox(height: 4),
+        _lineChart(
+          series: [
+            (_series(_ioRead), const Color(0xFF6366F1)),
+            (_series(_ioWrite), const Color(0xFF10B981)),
+          ],
+        ),
         const Divider(height: 24),
-        const Text('网络吞吐',
+        const Text('网络吞吐 (KB/s)',
             style: TextStyle(fontSize: 12, color: Colors.white54)),
-        _labelRow('下行', '${m.netRxKbps.toStringAsFixed(1)} KB/s'),
-        _labelRow('上行', '${m.netTxKbps.toStringAsFixed(1)} KB/s'),
+        const SizedBox(height: 4),
+        _lineChart(
+          series: [
+            (_series(_netRx), const Color(0xFF22D3EE)),
+            (_series(_netTx), const Color(0xFFA855F7)),
+          ],
+        ),
       ],
+    );
+  }
+
+  List<FlSpot> _series(List<double> data) {
+    return List.generate(
+      data.length,
+      (i) => FlSpot(i.toDouble(), data[i]),
+      growable: false,
+    );
+  }
+
+  Widget _lineChart({
+    required List<(List<FlSpot>, Color)> series,
+  }) {
+    final maxVal = series.fold<double>(1, (acc, s) {
+      final max = s.$1.fold<double>(0, (a, p) => p.y > a ? p.y : a);
+      return max > acc ? max : acc;
+    });
+    return SizedBox(
+      height: 120,
+      child: LineChart(
+        LineChartData(
+          minX: 0,
+          maxX: _historyLen.toDouble(),
+          minY: 0,
+          maxY: maxVal * 1.1,
+          gridData: const FlGridData(show: false),
+          titlesData: const FlTitlesData(
+            leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+            bottomTitles:
+                AxisTitles(sideTitles: SideTitles(showTitles: false)),
+            topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+            rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          ),
+          borderData: FlBorderData(show: false),
+          lineBarsData: series
+              .map((s) => LineChartBarData(
+                    spots: s.$1,
+                    isCurved: true,
+                    curveSmoothness: 0.3,
+                    color: s.$2,
+                    barWidth: 2,
+                    dotData: const FlDotData(show: false),
+                    belowBarData: BarAreaData(
+                        show: true,
+                        color: s.$2.withValues(alpha: 0.08)),
+                  ))
+              .toList(),
+        ),
+      ),
     );
   }
 
