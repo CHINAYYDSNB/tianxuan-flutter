@@ -102,7 +102,7 @@ class _TerminalWidgetState extends State<TerminalWidget> {
             _terminal,
             focusNode: _focusNode,
             autofocus: true,
-            hardwareKeyboardOnly: true,
+            hardwareKeyboardOnly: false,
             theme: _darkTheme,
             backgroundOpacity: 1,
           ),
