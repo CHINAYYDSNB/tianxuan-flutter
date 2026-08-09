@@ -43,16 +43,12 @@ class TerminalWidget extends StatefulWidget {
 
 class _TerminalWidgetState extends State<TerminalWidget> {
   late final Terminal _terminal;
-  final FocusNode _focusNode = FocusNode();
   String? _error;
 
   @override
   void initState() {
     super.initState();
     final log = LogService.instance;
-    _focusNode.addListener(() {
-      log.info('term', 'focus=${_focusNode.hasFocus}');
-    });
 
     _terminal = Terminal(
       maxLines: 10000,
@@ -80,7 +76,6 @@ class _TerminalWidgetState extends State<TerminalWidget> {
 
   @override
   void dispose() {
-    _focusNode.dispose();
     widget.ssh.dispose();
     super.dispose();
   }
@@ -100,9 +95,6 @@ class _TerminalWidgetState extends State<TerminalWidget> {
         Expanded(
           child: TerminalView(
             _terminal,
-            focusNode: _focusNode,
-            autofocus: false,
-            hardwareKeyboardOnly: false,
             theme: _darkTheme,
             backgroundOpacity: 1,
           ),
