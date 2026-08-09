@@ -170,13 +170,18 @@ class _TerminalWidgetState extends State<TerminalWidget> {
       _pendingIme = '';
       return;
     }
-    // Determine the newly committed increment.
+    // Chinese IME result (contains non-ASCII): send the whole committed text.
+    final hasNonAscii = text.codeUnits.any((c) => c > 0x7f);
+    if (hasNonAscii) {
+      widget.ssh.write(text);
+      _resetIme();
+      return;
+    }
+    // Pure ASCII (English typing): send only the newly-appended increment.
     final pending = _pendingIme;
     String delta;
     if (text.startsWith(pending)) {
       delta = text.substring(pending.length);
-    } else if (pending.startsWith(text)) {
-      delta = '';
     } else {
       delta = text;
     }
@@ -184,7 +189,11 @@ class _TerminalWidgetState extends State<TerminalWidget> {
     if (delta.isNotEmpty) {
       widget.ssh.write(delta);
     }
-    // Reset the TextField after sending committed text.
+    _resetIme();
+  }
+
+  void _resetIme() {
+    _pendingIme = '';
     _imeCtrl.value = const TextEditingValue(
       text: '',
       selection: TextSelection.collapsed(offset: 0),
