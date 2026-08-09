@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:xterm/xterm.dart';
 
+import '../services/log_service.dart';
 import '../services/recording_service.dart';
 import '../services/ssh_service.dart';
 
@@ -157,6 +158,8 @@ class _TerminalWidgetState extends State<TerminalWidget> {
   /// interrupted; once committed we send and reset.
   void _onImeChanged() {
     final value = _imeCtrl.value;
+    LogService.instance.info('ime',
+        'changed text=[${value.text}] composing=${value.composing} pending=$_pendingIme');
     if (!value.composing.isCollapsed) {
       // IME composition in progress: remember text, do not send yet.
       _pendingIme = value.text;

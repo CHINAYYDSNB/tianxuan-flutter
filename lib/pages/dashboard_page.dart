@@ -78,7 +78,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage>
       final password =
           await ref.read(hostPasswordProvider(hostId).future);
       final ssh = SshService();
-      await ssh.connect(host: host, password: password);
+      await ssh.connect(host: host, password: password, logVerbose: false);
       final m = await collectMetrics(ssh);
       await ssh.disconnect();
       if (mounted) setState(() => _metrics[hostId] = m);

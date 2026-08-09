@@ -25,17 +25,22 @@ class SshService {
     required Host host,
     required String? password,
     String? privateKey,
+    bool logVerbose = true,
   }) async {
     final log = LogService.instance;
-    log.info('ssh', 'connect start host=${host.address} port=${host.port} '
-        'user=${host.username} hasKey=${privateKey != null && privateKey.isNotEmpty}');
+    if (logVerbose) {
+      log.info('ssh', 'connect start host=${host.address} port=${host.port} '
+          'user=${host.username} hasKey=${privateKey != null && privateKey.isNotEmpty}');
+    }
     final sw = Stopwatch()..start();
     await disconnect();
 
     try {
       final socket = await SSHSocket.connect(host.address, host.port,
           timeout: const Duration(seconds: 15));
-      log.info('ssh', 'tcp connected in ${sw.elapsedMilliseconds}ms');
+      if (logVerbose) {
+        log.info('ssh', 'tcp connected in ${sw.elapsedMilliseconds}ms');
+      }
       _client = SSHClient(
         socket,
         username: host.username,
@@ -48,8 +53,10 @@ class SshService {
         authTimeout: const Duration(seconds: 15),
       );
       await _client!.authenticated;
-      log.info('ssh', 'authenticated in ${sw.elapsedMilliseconds}ms '
-          'remote=${_client!.remoteVersion}');
+      if (logVerbose) {
+        log.info('ssh', 'authenticated in ${sw.elapsedMilliseconds}ms '
+            'remote=${_client!.remoteVersion}');
+      }
 
       onStateChange?.call(true);
     } catch (e) {
