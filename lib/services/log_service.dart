@@ -35,12 +35,23 @@ class LogService {
     _pending.clear();
   }
   Directory get logsDir {
-    final base = _dirOverride ??
-        Directory('${Directory.current.path}${Platform.pathSeparator}logs');
+    final base = _dirOverride ?? _defaultLogsDir();
     if (!base.existsSync()) {
       base.createSync(recursive: true);
     }
     return base;
+  }
+
+  /// Default: `./logs` relative to the executable (works for portable builds).
+  Directory _defaultLogsDir() {
+    try {
+      final exe = File(Platform.resolvedExecutable);
+      final exeDir = exe.parent;
+      return Directory('${exeDir.path}${Platform.pathSeparator}logs');
+    } catch (_) {
+      return Directory(
+          '${Directory.current.path}${Platform.pathSeparator}logs');
+    }
   }
 
   void init() {
