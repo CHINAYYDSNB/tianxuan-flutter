@@ -117,18 +117,23 @@ class _RecorderPanelState extends State<RecorderPanel> {
           ),
         ),
         if (recording)
-          const Padding(
-            padding: EdgeInsets.only(bottom: 8),
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                SizedBox(
+                const SizedBox(
                   width: 10,
                   height: 10,
                   child: CircularProgressIndicator(strokeWidth: 2),
                 ),
-                SizedBox(width: 6),
-                Text('录制中...', style: TextStyle(fontSize: 12, color: Colors.white54)),
+                const SizedBox(width: 6),
+                Text('录制中...',
+                    style: TextStyle(
+                        fontSize: 12,
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? Colors.white54
+                            : Colors.black45)),
               ],
             ),
           ),
@@ -137,10 +142,14 @@ class _RecorderPanelState extends State<RecorderPanel> {
           child: _loading
               ? const Center(child: CircularProgressIndicator(strokeWidth: 2))
               : _files.isEmpty
-                  ? const Center(
+                  ? Center(
                       child: Text('暂无录像',
-                          style: TextStyle(color: Colors.white38)))
-                  : ListView.builder(
+                          style: TextStyle(
+                              color: Theme.of(context).brightness ==
+                                      Brightness.dark
+                                  ? Colors.white38
+                                  : Colors.black38)),
+                    ): ListView.builder(
                       itemCount: _files.length,
                       itemBuilder: (context, i) {
                         final f = _files[i];

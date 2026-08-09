@@ -222,8 +222,11 @@ class _HostCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final m = metrics;
     final online = m?.online ?? false;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final dim = isDark ? Colors.white54 : Colors.black45;
+    final dimmer = isDark ? Colors.white38 : Colors.black38;
+    final titleColor = isDark ? Colors.white : Colors.black87;
     return Card(
-      color: const Color(0xFF16191F),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
@@ -238,10 +241,10 @@ class _HostCard extends StatelessWidget {
                   Expanded(
                     child: Text(
                       host.name,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w600,
-                        color: Colors.white,
+                        color: titleColor,
                       ),
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -272,22 +275,22 @@ class _HostCard extends StatelessWidget {
               const SizedBox(height: 2),
               Text(
                 '${host.username}@${host.address}:${host.port}',
-                style: const TextStyle(fontSize: 12, color: Colors.white54),
+                style: TextStyle(fontSize: 12, color: dim),
                 overflow: TextOverflow.ellipsis,
               ),
               const SizedBox(height: 10),
               if (m == null)
-                const Expanded(
+                Expanded(
                   child: Center(
                     child: Text('采集指标中...',
-                        style: TextStyle(color: Colors.white38, fontSize: 12)),
+                        style: TextStyle(color: dimmer, fontSize: 12)),
                   ),
                 )
               else if (!m.online)
-                const Expanded(
+                Expanded(
                   child: Center(
                     child: Text('无法连接 / 凭证缺失',
-                        style: TextStyle(color: Colors.white38, fontSize: 12)),
+                        style: TextStyle(color: dimmer, fontSize: 12)),
                   ),
                 )
               else
@@ -296,15 +299,15 @@ class _HostCard extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       _bar('CPU', '${m.cpuPercent.toStringAsFixed(1)}%',
-                          m.cpuPercent, const Color(0xFF6366F1)),
+                          m.cpuPercent, const Color(0xFF6366F1), dim, isDark),
                       const SizedBox(height: 6),
                       _bar('内存',
                           '${m.memUsedMb}/${m.memTotalMb} MB',
-                          m.memPercent, const Color(0xFF10B981)),
+                          m.memPercent, const Color(0xFF10B981), dim, isDark),
                       const SizedBox(height: 6),
                       _bar('磁盘',
                           '${m.diskUsedGb.toStringAsFixed(1)}/${m.diskTotalGb.toStringAsFixed(1)} G',
-                          m.diskPercent, const Color(0xFFF59E0B)),
+                          m.diskPercent, const Color(0xFFF59E0B), dim, isDark),
                     ],
                   ),
                 ),
@@ -315,14 +318,14 @@ class _HostCard extends StatelessWidget {
     );
   }
 
-  Widget _bar(String label, String text, double percent, Color color) {
+  Widget _bar(String label, String text, double percent, Color color, Color dim, bool isDark) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(label, style: const TextStyle(fontSize: 11, color: Colors.white54)),
+            Text(label, style: TextStyle(fontSize: 11, color: dim)),
             Text(text,
                 style: const TextStyle(
                     fontSize: 11, fontFamily: 'monospace')),
@@ -334,7 +337,9 @@ class _HostCard extends StatelessWidget {
           child: LinearProgressIndicator(
             value: (percent / 100).clamp(0.0, 1.0),
             minHeight: 3,
-            backgroundColor: const Color(0xFF1E222A),
+            backgroundColor: isDark
+                ? const Color(0xFF1E222A)
+                : const Color(0xFFE0E3E8),
             valueColor: AlwaysStoppedAnimation(color),
           ),
         ),

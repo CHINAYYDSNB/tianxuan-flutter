@@ -210,7 +210,11 @@ class _FilePanelState extends State<FilePanel> {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(k, style: const TextStyle(color: Colors.white54)),
+            Text(k,
+                style: TextStyle(
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.white54
+                        : Colors.black45)),
             Text(v),
           ],
         ),
@@ -340,8 +344,13 @@ class _FilePanelState extends State<FilePanel> {
                             ),
                             if (!e.isDir)
                               Text(_fmtSize(e.size),
-                                  style: const TextStyle(
-                                      fontSize: 11, color: Colors.white54)),
+                                  style: TextStyle(
+                                      fontSize: 11,
+                                      color:
+                                          Theme.of(context).brightness ==
+                                                  Brightness.dark
+                                              ? Colors.white54
+                                              : Colors.black45)),
                           ],
                         ),
                       ),

@@ -89,7 +89,6 @@ class _PanelListPageState extends ConsumerState<PanelListPage> {
               padding: const EdgeInsets.all(16),
               children: panels.map((p) {
                 return Card(
-                  color: const Color(0xFF16191F),
                   child: InkWell(
                     onDoubleTap: () => _openPanel(p),
                     onSecondaryTapDown: (d) {

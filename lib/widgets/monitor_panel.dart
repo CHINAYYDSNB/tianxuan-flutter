@@ -65,8 +65,12 @@ class _MonitorPanelState extends ConsumerState<MonitorPanel> {
   Widget build(BuildContext context) {
     final m = _metrics;
     if (m == null) {
-      return const Center(
-          child: Text('采集指标中...', style: TextStyle(color: Colors.white54)));
+      return Center(
+          child: Text('采集指标中...',
+              style: TextStyle(
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? Colors.white54
+                      : Colors.black45)));
     }
     final isDark = Theme.of(context).brightness == Brightness.dark;
     // high-contrast line colors; dark theme uses bright hues, light uses deep hues

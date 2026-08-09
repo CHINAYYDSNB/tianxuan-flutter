@@ -114,9 +114,17 @@ class _HostWorkspacePageState extends ConsumerState<HostWorkspacePage>
           ),
           Container(
             width: 300,
-            decoration: const BoxDecoration(
-              color: Color(0xFF0D0F13),
-              border: Border(left: BorderSide(color: Color(0xFF1E222A))),
+            decoration: BoxDecoration(
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? const Color(0xFF0D0F13)
+                  : const Color(0xFFF0F1F4),
+              border: Border(
+                left: BorderSide(
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? const Color(0xFF1E222A)
+                      : const Color(0xFFE0E3E8),
+                ),
+              ),
             ),
             child: Column(
               children: [
@@ -135,9 +143,14 @@ class _HostWorkspacePageState extends ConsumerState<HostWorkspacePage>
                       MonitorPanel(ssh: _ssh),
                       _sftpReady
                           ? FilePanel(sftp: _sftp)
-                          : const Center(
+                          : Center(
                               child: Text('SFTP 初始化中...',
-                                  style: TextStyle(color: Colors.white54))),
+                                  style: TextStyle(
+                                      color: Theme.of(context).brightness ==
+                                              Brightness.dark
+                                          ? Colors.white54
+                                          : Colors.black45)),
+                            ),
                       RecorderPanel(
                         recorder: _recorder,
                         hostName: widget.host.name,

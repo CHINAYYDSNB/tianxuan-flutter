@@ -123,9 +123,17 @@ class _BatchPageState extends ConsumerState<BatchPage> {
           Container(
             width: 260,
             padding: const EdgeInsets.all(12),
-            decoration: const BoxDecoration(
-              color: Color(0xFF0D0F13),
-              border: Border(right: BorderSide(color: Color(0xFF1E222A))),
+            decoration: BoxDecoration(
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? const Color(0xFF0D0F13)
+                  : const Color(0xFFF0F1F4),
+              border: Border(
+                right: BorderSide(
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? const Color(0xFF1E222A)
+                      : const Color(0xFFE0E3E8),
+                ),
+              ),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -257,8 +265,9 @@ class _ResultTileState extends State<_ResultTile> {
   @override
   Widget build(BuildContext context) {
     final r = widget.result;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final dim = isDark ? Colors.white54 : Colors.black45;
     return Card(
-      color: const Color(0xFF16191F),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -281,8 +290,7 @@ class _ResultTileState extends State<_ResultTile> {
                         style: const TextStyle(fontWeight: FontWeight.w600)),
                   ),
                   Text('exit ${r.exitCode ?? '-'} · ${r.elapsedMs}ms',
-                      style: const TextStyle(
-                          fontSize: 12, color: Colors.white54)),
+                      style: TextStyle(fontSize: 12, color: dim)),
                   const SizedBox(width: 8),
                   Icon(_expanded ? Icons.expand_less : Icons.expand_more,
                       size: 16),
@@ -294,9 +302,9 @@ class _ResultTileState extends State<_ResultTile> {
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(10),
-              decoration: const BoxDecoration(
-                color: Color(0xFF0D0F13),
-                borderRadius: BorderRadius.vertical(
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF0D0F13) : const Color(0xFFF0F1F4),
+                borderRadius: const BorderRadius.vertical(
                     bottom: Radius.circular(4)),
               ),
               child: r.error != null
