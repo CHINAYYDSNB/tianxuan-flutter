@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -89,7 +90,7 @@ class _ReplayPageState extends State<ReplayPage> {
     final wallMs = (nowMs + 50 * _speed);
     while (_nextEvent < events.length &&
         events[_nextEvent].timeMs <= wallMs) {
-      _terminal.write(String.fromCharCodes(events[_nextEvent].data));
+      _terminal.write(utf8.decode(events[_nextEvent].data, allowMalformed: true));
       _nextEvent++;
     }
     setState(() {

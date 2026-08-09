@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -92,7 +93,7 @@ class SftpService {
     final file = await fs.open(path, mode: SftpFileOpenMode.read);
     try {
       final bytes = await file.readBytes();
-      return String.fromCharCodes(bytes);
+      return utf8.decode(bytes, allowMalformed: true);
     } finally {
       await file.close();
     }

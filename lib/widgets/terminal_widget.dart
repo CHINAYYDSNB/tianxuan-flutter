@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:xterm/xterm.dart';
@@ -65,7 +67,8 @@ class _TerminalWidgetState extends State<TerminalWidget> {
     );
     widget.ssh.onOutput = (bytes) {
       widget.recorder?.record(bytes);
-      _terminal.write(String.fromCharCodes(bytes));
+      // Decode bytes as UTF-8 so CJK output renders correctly.
+      _terminal.write(utf8.decode(bytes, allowMalformed: true));
     };
     widget.ssh.onStateChange = (connected) {
       if (mounted && connected) {
