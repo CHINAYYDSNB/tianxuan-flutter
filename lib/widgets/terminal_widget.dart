@@ -47,6 +47,7 @@ class _TerminalWidgetState extends State<TerminalWidget> {
   final TextEditingController _imeCtrl = TextEditingController();
   final FocusNode _imeFocus = FocusNode();
   String _pendingIme = '';
+  bool _wasComposing = false;
   String? _error;
 
   @override
@@ -152,32 +153,44 @@ class _TerminalWidgetState extends State<TerminalWidget> {
     return null;
   }
 
-  /// TextField value changed. Send only committed (non-composing) text to the
-  /// terminal — this captures both English typing and Chinese IME results.
-  /// During an active composition we do nothing so the input method is not
-  /// interrupted; once committed we send and reset.
+  /// TextField value changed. Send committed text to the terminal.
+  ///
+  /// Distinguishes two cases:
+  ///  1. IME composition just finished (was composing -> now collapsed):
+  ///     send the whole committed text (covers Chinese and IME-typed ASCII).
+  ///  2. Direct English typing (collapsed the whole time): send only the
+  ///     newly-appended increment so characters are not duplicated.
   void _onImeChanged() {
     final value = _imeCtrl.value;
     LogService.instance.info('ime',
-        'changed text=[${value.text}] composing=${value.composing} pending=$_pendingIme');
-    if (!value.composing.isCollapsed) {
+        'changed text=[${value.text}] composing=${value.composing} wasComposing=$_wasComposing');
+    final composing = !value.composing.isCollapsed;
+    final text = value.text;
+
+    if (composing) {
       // IME composition in progress: remember text, do not send yet.
-      _pendingIme = value.text;
+      _pendingIme = text;
+      _wasComposing = true;
       return;
     }
-    final text = value.text;
+
+    // Committed text (no active composition now).
+    final justFinishedIme = _wasComposing;
+    _wasComposing = false;
+
     if (text.isEmpty) {
       _pendingIme = '';
       return;
     }
-    // Chinese IME result (contains non-ASCII): send the whole committed text.
-    final hasNonAscii = text.codeUnits.any((c) => c > 0x7f);
-    if (hasNonAscii) {
+
+    if (justFinishedIme) {
+      // An IME composition just completed: send the whole result.
       widget.ssh.write(text);
       _resetIme();
       return;
     }
-    // Pure ASCII (English typing): send only the newly-appended increment.
+
+    // Direct English typing: send only the newly-appended increment.
     final pending = _pendingIme;
     String delta;
     if (text.startsWith(pending)) {

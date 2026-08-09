@@ -79,6 +79,11 @@ class SshService {
         width: cols,
         height: rows,
       ),
+      // Ensure UTF-8 locale so non-ASCII (e.g. Chinese) renders correctly.
+      environment: const {
+        'LANG': 'C.UTF-8',
+        'LC_ALL': 'C.UTF-8',
+      },
     );
     log.info('ssh', 'shell opened');
 
