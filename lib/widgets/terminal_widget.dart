@@ -43,6 +43,7 @@ class TerminalWidget extends StatefulWidget {
 
 class _TerminalWidgetState extends State<TerminalWidget> {
   late final Terminal _terminal;
+  final GlobalKey<TerminalViewState> _termKey = GlobalKey();
   String? _error;
 
   @override
@@ -67,11 +68,22 @@ class _TerminalWidgetState extends State<TerminalWidget> {
     widget.ssh.onStateChange = (connected) {
       if (mounted && connected) {
         _terminal.write('\x1b[32m[已连接]\x1b[0m\r\n');
+        _requestKeyboard();
       }
     };
     widget.ssh.onError = (e) {
       if (mounted) setState(() => _error = e);
     };
+  }
+
+  /// Request the TextInput connection (needed for IME + keyboard on desktop).
+  void _requestKeyboard() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      try {
+        _termKey.currentState?.requestKeyboard();
+      } catch (_) {}
+    });
   }
 
   @override
@@ -93,10 +105,17 @@ class _TerminalWidgetState extends State<TerminalWidget> {
                 style: const TextStyle(color: Colors.redAccent, fontSize: 12)),
           ),
         Expanded(
-          child: TerminalView(
-            _terminal,
-            theme: _darkTheme,
-            backgroundOpacity: 1,
+          child: GestureDetector(
+            behavior: HitTestBehavior.translucent,
+            onTapDown: (_) => _requestKeyboard(),
+            child: TerminalView(
+              _terminal,
+              key: _termKey,
+              autofocus: false,
+              hardwareKeyboardOnly: false,
+              theme: _darkTheme,
+              backgroundOpacity: 1,
+            ),
           ),
         ),
       ],
