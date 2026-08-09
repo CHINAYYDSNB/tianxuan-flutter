@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:xterm/xterm.dart';
 
-import '../services/log_service.dart';
 import '../services/recording_service.dart';
 import '../services/ssh_service.dart';
 
@@ -43,20 +43,19 @@ class TerminalWidget extends StatefulWidget {
 
 class _TerminalWidgetState extends State<TerminalWidget> {
   late final Terminal _terminal;
-  final GlobalKey<TerminalViewState> _termKey = GlobalKey();
+  final TextEditingController _imeCtrl = TextEditingController();
+  final FocusNode _imeFocus = FocusNode();
   String? _error;
 
   @override
   void initState() {
     super.initState();
-    final log = LogService.instance;
 
+    // Terminal output only (render server->client stream). Input is handled
+    // by the transparent TextField below, NOT by xterm's keyboard handler,
+    // to support both hardware keys and Chinese IME reliably on Windows.
     _terminal = Terminal(
       maxLines: 10000,
-      onOutput: (data) {
-        log.writeBytes('term-in', data.codeUnits, prefix: 'xtermInput> ');
-        widget.ssh.write(data);
-      },
       onResize: (w, h, pw, ph) {
         widget.ssh.resize(w, h);
       },
@@ -68,7 +67,6 @@ class _TerminalWidgetState extends State<TerminalWidget> {
     widget.ssh.onStateChange = (connected) {
       if (mounted && connected) {
         _terminal.write('\x1b[32m[已连接]\x1b[0m\r\n');
-        _requestKeyboard();
       }
     };
     widget.ssh.onError = (e) {
@@ -76,20 +74,86 @@ class _TerminalWidgetState extends State<TerminalWidget> {
     };
   }
 
-  /// Request the TextInput connection (needed for IME + keyboard on desktop).
-  void _requestKeyboard() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      try {
-        _termKey.currentState?.requestKeyboard();
-      } catch (_) {}
-    });
-  }
-
   @override
   void dispose() {
+    _imeCtrl.dispose();
+    _imeFocus.dispose();
     widget.ssh.dispose();
     super.dispose();
+  }
+
+  /// Hardware keyboard (non-IME) key events.
+  KeyEventResult _onKeyEvent(FocusNode node, KeyEvent event) {
+    if (event is! KeyDownEvent && event is! KeyRepeatEvent) {
+      return KeyEventResult.ignored;
+    }
+    final logical = event.logicalKey;
+    final ctrl = HardwareKeyboard.instance.isControlPressed;
+    final alt = HardwareKeyboard.instance.isAltPressed;
+    final shift = HardwareKeyboard.instance.isShiftPressed;
+
+    // Ctrl+C / Ctrl+D / Ctrl+Z style control keys
+    if (ctrl && logical.keyLabel.length == 1) {
+      final letter = logical.keyLabel.toLowerCase();
+      if (letter == 'c') {
+        widget.ssh.write('\x03');
+        return KeyEventResult.handled;
+      }
+      if (letter == 'd') {
+        widget.ssh.write('\x04');
+        return KeyEventResult.handled;
+      }
+      if (letter == 'z') {
+        widget.ssh.write('\x1a');
+        return KeyEventResult.handled;
+      }
+      if (letter == 'l') {
+        widget.ssh.write('\x0c');
+        return KeyEventResult.handled;
+      }
+    }
+
+    // Map a LogicalKeyboardKey to a terminal key sequence.
+    String? seq = _keySequence(logical, ctrl: ctrl, alt: alt, shift: shift);
+    if (seq != null) {
+      widget.ssh.write(seq);
+      return KeyEventResult.handled;
+    }
+
+    // Printable character from a hardware key (English/numbers/symbols).
+    final ch = event.character;
+    if (ch != null && ch.isNotEmpty && ch.codeUnitAt(0) >= 0x20) {
+      widget.ssh.write(ch);
+      return KeyEventResult.handled;
+    }
+
+    return KeyEventResult.ignored;
+  }
+
+  /// Map special keys to terminal escape sequences.
+  String? _keySequence(LogicalKeyboardKey key,
+      {required bool ctrl, required bool alt, required bool shift}) {
+    if (key == LogicalKeyboardKey.arrowUp) return '\x1b[A';
+    if (key == LogicalKeyboardKey.arrowDown) return '\x1b[B';
+    if (key == LogicalKeyboardKey.arrowRight) return '\x1b[C';
+    if (key == LogicalKeyboardKey.arrowLeft) return '\x1b[D';
+    if (key == LogicalKeyboardKey.home) return '\x1b[H';
+    if (key == LogicalKeyboardKey.end) return '\x1b[F';
+    if (key == LogicalKeyboardKey.pageUp) return '\x1b[5~';
+    if (key == LogicalKeyboardKey.pageDown) return '\x1b[6~';
+    if (key == LogicalKeyboardKey.delete) return '\x1b[3~';
+    if (key == LogicalKeyboardKey.backspace) return '\x7f';
+    if (key == LogicalKeyboardKey.tab) return '\t';
+    return null;
+  }
+
+  /// IME composing finished / pasted text -> send to terminal.
+  void _onImeChanged(String text) {
+    if (text.isEmpty) return;
+    // Only forward text that is not a plain hardware echo (which we handle
+    // in onKeyEvent). IME composition and paste arrive here.
+    widget.ssh.write(text);
+    _imeCtrl.clear();
   }
 
   @override
@@ -105,17 +169,41 @@ class _TerminalWidgetState extends State<TerminalWidget> {
                 style: const TextStyle(color: Colors.redAccent, fontSize: 12)),
           ),
         Expanded(
-          child: GestureDetector(
-            behavior: HitTestBehavior.translucent,
-            onTapDown: (_) => _requestKeyboard(),
-            child: TerminalView(
-              _terminal,
-              key: _termKey,
-              autofocus: false,
-              hardwareKeyboardOnly: false,
-              theme: _darkTheme,
-              backgroundOpacity: 1,
-            ),
+          child: Stack(
+            children: [
+              Positioned.fill(
+                child: TerminalView(
+                  _terminal,
+                  theme: _darkTheme,
+                  backgroundOpacity: 1,
+                  readOnly: true,
+                ),
+              ),
+              // Transparent full-screen TextField: holds focus, catches both
+              // hardware keys (Focus.onKeyEvent) and IME composition (onChanged).
+              Positioned.fill(
+                child: Focus(
+                  focusNode: _imeFocus,
+                  autofocus: true,
+                  onKeyEvent: _onKeyEvent,
+                  child: TextField(
+                    controller: _imeCtrl,
+                    onChanged: _onImeChanged,
+                    style:
+                        const TextStyle(fontSize: 1, color: Colors.transparent),
+                    decoration: const InputDecoration(
+                      border: InputBorder.none,
+                      isCollapsed: true,
+                    ),
+                    cursorColor: Colors.transparent,
+                    showCursor: false,
+                    enableSuggestions: false,
+                    autocorrect: false,
+                    maxLines: null,
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ],
