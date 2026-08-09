@@ -12,7 +12,7 @@ void main() {
 }
 
 class ThemeLoader extends ConsumerWidget {
-  const ThemeLoader();
+  const ThemeLoader({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
