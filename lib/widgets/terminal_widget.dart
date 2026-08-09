@@ -45,6 +45,7 @@ class _TerminalWidgetState extends State<TerminalWidget> {
   late final Terminal _terminal;
   final TextEditingController _imeCtrl = TextEditingController();
   final FocusNode _imeFocus = FocusNode();
+  String _pendingIme = '';
   String? _error;
 
   @override
@@ -72,10 +73,16 @@ class _TerminalWidgetState extends State<TerminalWidget> {
     widget.ssh.onError = (e) {
       if (mounted) setState(() => _error = e);
     };
+
+    // Watch TextField value: send committed text (non-composing) to terminal,
+    // then reset. During IME composition (composing active) we do nothing so
+    // the input method is not interrupted.
+    _imeCtrl.addListener(_onImeChanged);
   }
 
   @override
   void dispose() {
+    _imeCtrl.removeListener(_onImeChanged);
     _imeCtrl.dispose();
     _imeFocus.dispose();
     widget.ssh.dispose();
@@ -120,13 +127,10 @@ class _TerminalWidgetState extends State<TerminalWidget> {
       return KeyEventResult.handled;
     }
 
-    // Printable character from a hardware key (English/numbers/symbols).
-    final ch = event.character;
-    if (ch != null && ch.isNotEmpty && ch.codeUnitAt(0) >= 0x20) {
-      widget.ssh.write(ch);
-      return KeyEventResult.handled;
-    }
-
+    // Printable characters are NOT handled here: let them flow into the
+    // TextField so that both English (typed directly) and Chinese IME
+    // composition are captured through onChanged. Handling them here would
+    // send IME pinyin keystrokes to the terminal as garbage.
     return KeyEventResult.ignored;
   }
 
@@ -147,13 +151,41 @@ class _TerminalWidgetState extends State<TerminalWidget> {
     return null;
   }
 
-  /// IME composing finished / pasted text -> send to terminal.
-  void _onImeChanged(String text) {
-    if (text.isEmpty) return;
-    // Only forward text that is not a plain hardware echo (which we handle
-    // in onKeyEvent). IME composition and paste arrive here.
-    widget.ssh.write(text);
-    _imeCtrl.clear();
+  /// TextField value changed. Send only committed (non-composing) text to the
+  /// terminal — this captures both English typing and Chinese IME results.
+  /// During an active composition we do nothing so the input method is not
+  /// interrupted; once committed we send and reset.
+  void _onImeChanged() {
+    final value = _imeCtrl.value;
+    if (!value.composing.isCollapsed) {
+      // IME composition in progress: remember text, do not send yet.
+      _pendingIme = value.text;
+      return;
+    }
+    final text = value.text;
+    if (text.isEmpty) {
+      _pendingIme = '';
+      return;
+    }
+    // Determine the newly committed increment.
+    final pending = _pendingIme;
+    String delta;
+    if (text.startsWith(pending)) {
+      delta = text.substring(pending.length);
+    } else if (pending.startsWith(text)) {
+      delta = '';
+    } else {
+      delta = text;
+    }
+    _pendingIme = '';
+    if (delta.isNotEmpty) {
+      widget.ssh.write(delta);
+    }
+    // Reset the TextField after sending committed text.
+    _imeCtrl.value = const TextEditingValue(
+      text: '',
+      selection: TextSelection.collapsed(offset: 0),
+    );
   }
 
   @override
@@ -188,7 +220,6 @@ class _TerminalWidgetState extends State<TerminalWidget> {
                   onKeyEvent: _onKeyEvent,
                   child: TextField(
                     controller: _imeCtrl,
-                    onChanged: _onImeChanged,
                     style:
                         const TextStyle(fontSize: 1, color: Colors.transparent),
                     decoration: const InputDecoration(
